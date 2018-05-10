@@ -1,0 +1,2 @@
+model_checkpoint_path: "jewsmodel.ckpt"
+all_model_checkpoint_paths: "jewsmodel.ckpt"
