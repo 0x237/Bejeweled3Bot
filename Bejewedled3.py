@@ -47,9 +47,9 @@ class Bejewedled3(object):
         for row in range(8):
             clrrow = list()
             for col in range(8):
-                clrrow.append(clrlist[self.jewmatrix[row][col]])
+                clrrow.append(clrlist[self.jewmatrix[col][row]])
             clrmatrix.append(clrrow)
-        print("宝石阵：\n", clrmatrix)
+        print("宝石阵：")
         for i in range(len(clrmatrix)):
             print(clrmatrix[i])
 
@@ -84,6 +84,12 @@ class Bejewedled3(object):
 
     # 产生可行操作
     def makeactions(self):
+        def isblack(mtx, x, y):
+            if mtx[x][y] == 7:
+                return True
+            else:
+                return False
+
         def isysame(mtx, x, y1, y2, y3):
             if y1 < 0 or y1 > 7 or y2 < 0 or y2 > 7 or y3 < 0 or y3 > 7:
                 return False
@@ -105,7 +111,8 @@ class Bejewedled3(object):
                 return False
             else:
                 mtx[x1][y1], mtx[x2][y2] = mtx[x2][y2], mtx[x1][y1]
-            if isysame(mtx, x2, y2-2, y2-1, y2) or isysame(mtx, x2, y2-1, y2, y2+1) \
+            if isblack(mtx, x1, y1) or isblack(mtx, x2, y2) \
+                    or isysame(mtx, x2, y2-2, y2-1, y2) or isysame(mtx, x2, y2-1, y2, y2+1) \
                     or isysame(mtx, x2, y2, y2+1, y2+2) \
                     or isxsame(mtx, y2, x2-2, x2-1, x2) or isxsame(mtx, y2, x2-1, x2, x2+1) \
                     or isxsame(mtx, y2, x2, x2+1, x2+2) \
@@ -140,6 +147,7 @@ class Bejewedled3(object):
         while self.goon:
             self.mouse.click(int(self.mousebase[0]*0.8)-20, int(self.mousebase[1]*0.8))
             self.makejewmatrix()
+            self.showclrmatrix()
             self.makeactions()
             self.mouse.move(int(self.mousebase[0]*0.8)-20, int(self.mousebase[1]*0.8))
             time.sleep(3)
