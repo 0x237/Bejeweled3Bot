@@ -1,8 +1,8 @@
-""" 
+''' 
 pymouse是PyUserInput模块的一部分。
 需要pip安装pywin32，以及pyhook。
 pyhook需要去https://www.lfd.uci.edu/~gohlke/pythonlibs/下载whl文件来安装。
-"""
+'''
 from pymouse import PyMouse
 from PIL import ImageGrab
 import win32gui
@@ -12,7 +12,7 @@ import numpy as np
 
 
 class Bejewedled3(object):
-    """
+    '''
     宝石迷阵类
     wnd 窗口句柄
     box 游戏区域
@@ -20,36 +20,46 @@ class Bejewedled3(object):
     mouse 鼠标
     matriximg 游戏区域截图
     jewmatrix 宝石方阵
-    sess 宝石识别模型对话
+    colorsess 宝石颜色识别模型对话
+    levelsess 宝石类别识别模型对话
+    goon 是否无解
 
-    """
+    '''
     def __init__(self):
-        self.wnd = win32gui.FindWindow(None, "Bejeweled 3")
+        self.wnd = win32gui.FindWindow(None, 'Bejeweled 3')
         x1, y1, x2, y2 = win32gui.GetWindowRect(self.wnd)
         self.box = (x1*1.25+270, y1*1.25+75, x2*1.25-35, y2*1.25-61)
         self.mousebase = [int(x1*1.25+270), int(y1*1.25+75)]
         self.mouse = PyMouse()
-        modelsaver = tf.train.import_meta_graph(".\\model\\jewsmodel.ckpt.meta")
-        self.sess = tf.Session()
-        modelsaver.restore(self.sess, ".\\model\\jewsmodel.ckpt")
+        self.colorgraph = tf.Graph()
+        with self.colorgraph.as_default():
+            colorsaver = tf.train.import_meta_graph('.\\model\\color\\colormodel.ckpt-1201.meta')
+            self.colorsess = tf.Session(graph=self.colorgraph)
+            colorsaver.restore(self.colorsess, '.\\model\\color\\colormodel.ckpt-1201')
+        self.levelgraph = tf.Graph()
+        with self.levelgraph.as_default():
+            levelsaver = tf.train.import_meta_graph('.\\model\\level\\levelmodel.ckpt-601.meta')
+            self.levelsess = tf.Session(graph=self.levelgraph)
+            levelsaver.restore(self.levelsess, '.\\model\\level\\levelmodel.ckpt-601')
         self.goon = True
         self.jewmatrix = list()
         self.matriximg = ImageGrab.grab(self.box)
-        print("init finished")
+        print('init finished')
 
     def __del__(self):
-        self.sess.close()
+        self.colorsess.close()
+        self.levelsess.close()
 
     # 将宝石数字矩阵转换为颜色矩阵并输出
     def showclrmatrix(self):
         clrmatrix = list()
-        clrlist = ["紫", "白", "绿", "黄", "蓝", "红", "橙", "黑"]
+        clrlist = ['紫', '白', '绿', '黄', '蓝', '红', '橙', '黑']
         for row in range(8):
             clrrow = list()
             for col in range(8):
-                clrrow.append(clrlist[self.jewmatrix[col][row]])
+                clrrow.append(clrlist[self.jewmatrix[col][row]//10]+str(self.jewmatrix[col][row]%10))
             clrmatrix.append(clrrow)
-        print("宝石阵：")
+        print('宝石阵：')
         for i in range(len(clrmatrix)):
             print(clrmatrix[i])
 
@@ -63,23 +73,42 @@ class Bejewedled3(object):
     # 截屏，获得排列矩阵#
     def makejewmatrix(self):
         self.matriximg = ImageGrab.grab(self.box)
-        # self.matriximg.save("jewimg\\jewmatrix\\"+str(time.time())+".jpg", "jpeg")
+        # self.matriximg.save('tmp\\'+str(time.time())+'.jpg', 'jpeg')
         self.jewmatrix = list()
         for col in range(8):
             jewcol = list()
             for row in range(8):
-                jewcol.append(self.whichjew(self.matriximg.crop((col*64, row*64, col*64+63, row*64+63))))
+                img_name = str(time.time())
+
+                img = self.matriximg.crop((col*64, row*64, col*64+63, row*64+63))
+                jew_color = self.whichcolor(img)
+                jew_level = self.whichlevel(img)
+                jewcol.append(jew_color*10 + jew_level)
+                # img.save('tmp\\'+img_name+'.jpg', 'jpeg')
+                # print(img_name + ': ', jew_color)
             self.jewmatrix.append(jewcol)
 
-    # 判断某个坐标处是什么宝石
-    def whichjew(self, jewimg):
-        """获取3*3方框平均颜色"""
-        jewimg = jewimg.crop((20, 20, 44, 44))
+    # 判断某个坐标处是什么颜色宝石
+    def whichcolor(self, jewimg):
+        '''获取3*3方框平均颜色'''
+        # jewimg = jewimg.crop((20, 20, 44, 44))
+        jewimg = jewimg.resize((24, 24))
         imgdata = np.array(list(jewimg.getdata())).T
         imgdata.reshape(-1, )
-        res = self.sess.run(tf.get_default_graph().get_tensor_by_name("prediction:0"),
-                            feed_dict={tf.get_default_graph().get_tensor_by_name("x:0"): imgdata.reshape((-1, 3, 576)),
-                                       tf.get_default_graph().get_tensor_by_name("keep_prob:0"): 1})
+        res = self.colorsess.run(self.colorgraph.get_tensor_by_name('prediction:0'),
+                            feed_dict={self.colorgraph.get_tensor_by_name('x:0'): imgdata.reshape((-1, 3, 576)),
+                                       self.colorgraph.get_tensor_by_name('keep_prob:0'): 1})
+        return np.argmax(res, 1)[0]
+
+    # 判断某个坐标处是什么类型宝石
+    def whichlevel(self, jewimg):
+        '''获取3*3方框平均颜色'''
+        jewimg = jewimg.resize((24, 24))
+        imgdata = np.array(list(jewimg.getdata())).T
+        imgdata.reshape(-1, )
+        res = self.levelsess.run(self.levelgraph.get_tensor_by_name('prediction:0'),
+                            feed_dict={self.levelgraph.get_tensor_by_name('x:0'): imgdata.reshape((-1, 3, 576)),
+                                       self.levelgraph.get_tensor_by_name('keep_prob:0'): 1})
         return np.argmax(res, 1)[0]
 
     # 产生可行操作
@@ -139,7 +168,7 @@ class Bejewedled3(object):
                     ans = True
                     break
         if not ans:
-            print("无解")
+            print('无解')
             # self.goon = False
 
     # 开始破解迷阵--ZEN模式

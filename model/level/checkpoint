@@ -1,0 +1,2 @@
+model_checkpoint_path: "levelmodel.ckpt-601"
+all_model_checkpoint_paths: "levelmodel.ckpt-601"

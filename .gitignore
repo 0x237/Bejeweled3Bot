@@ -1,6 +1,13 @@
 jews/
 jews2/
+jews3/
+modelcopy/
 tflog/
+imgraw/
+autoclassify/
+.idea/
+.vscode/
+tmp/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

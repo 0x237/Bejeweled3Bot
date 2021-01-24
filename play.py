@@ -23,14 +23,14 @@ def keyctrl(event):
         sys.exit(0)
     return True
 
+if __name__ == '__main__':
+    # 新建线程自动游戏，并设置为守护线程
+    bejewthd = threading.Thread(target=bejewrun)
+    bejewthd.setDaemon(True)
+    bejewthd.start()
 
-# 新建线程自动游戏，并设置为守护线程
-bejewthd = threading.Thread(target=bejewrun)
-bejewthd.setDaemon(True)
-bejewthd.start()
-
-# 监听键盘
-hm = pyHook.HookManager()
-hm.KeyDown = keyctrl
-hm.HookKeyboard()
-pythoncom.PumpMessages()
+    # 监听键盘
+    hm = pyHook.HookManager()
+    hm.KeyDown = keyctrl
+    hm.HookKeyboard()
+    pythoncom.PumpMessages()
